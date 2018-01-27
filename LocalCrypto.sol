@@ -50,15 +50,14 @@ library ECCMath_noconflict {
         uint bit = 2 ** 255;
         bit = bit;
         assembly {
-            loop:
-                jumpi(end, iszero(bit))
+            // replaced jump and jumpi by for loop due to compile errors/warnings
+            for { } not(eq(bit, 0)) { } {
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, bit)))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 2))))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 4))))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 8))))), m)
                 bit := div(bit, 16)
-                jump(loop)
-            end:
+            }
         }
     }
 
@@ -348,22 +347,25 @@ library Secp256k1_noconflict {
         // wNAF
         assembly
         {
-                let dm := 0
-                dwPtr := mload(0x40)
-                mstore(0x40, add(dwPtr, 512)) // Should lower this.
-            loop:
-                jumpi(loop_end, iszero(d))
-                jumpi(even, iszero(and(d, 1)))
+            let dm := 0
+            dwPtr := mload(0x40)
+            mstore(0x40, add(dwPtr, 512)) // Should lower this.
+
+            // replaced jumpi and jump by for loop due to compile errors/warnings
+            for { } not(eq(d, 0)) { } {
+              // since if is not supported we used the switch statement to replace the conditional jump
+              switch not(eq(and(d, 1), 0))
+              case 1 {
                 dm := mod(d, 32)
                 mstore8(add(dwPtr, i), dm) // Don"t store as signed - convert when reading.
                 d := add(sub(d, dm), mul(gt(dm, 16), 32))
-            even:
-                d := div(d, 2)
-                i := add(i, 1)
-                jump(loop)
-            loop_end:
+              }
+              default { }
+              d := div(d, 2)
+              i := add(i, 1)
+            }
         }
-        
+
         dwPtr = dwPtr;
 
         // Pre calculation
